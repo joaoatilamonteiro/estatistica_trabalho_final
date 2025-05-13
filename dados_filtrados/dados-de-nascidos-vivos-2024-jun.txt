@@ -1,0 +1,66 @@
+Nome da tabela: GESTACAO
+Contagem            12739.00
+Média                   4.83
+Desvio Padrão           0.50
+Mínimo                  1.00
+Primeiro Quartil        5.00
+Mediana                 5.00
+Terceiro Quartil        5.00
+max                     6.00
+Moda                    5.00
+
+Nome da tabela: QTDFILVIVO
+Contagem            11411.00
+Média                   1.03
+Desvio Padrão           1.16
+Mínimo                  0.00
+Primeiro Quartil        0.00
+Mediana                 1.00
+Terceiro Quartil        2.00
+max                     9.00
+Moda                    0.00
+
+Nome da tabela: GESTACAO
+Contagem            12739.00
+Média                   4.83
+Desvio Padrão           0.50
+Mínimo                  1.00
+Primeiro Quartil        5.00
+Mediana                 5.00
+Terceiro Quartil        5.00
+max                     6.00
+Moda                    5.00
+
+Nome da tabela: GRAVIDEZ
+Contagem            12988.00
+Média                   1.02
+Desvio Padrão           0.15
+Mínimo                  1.00
+Primeiro Quartil        1.00
+Mediana                 1.00
+Terceiro Quartil        1.00
+max                     3.00
+Moda                    1.00
+
+Nome da tabela: PARTO
+Contagem            12990.00
+Média                   1.65
+Desvio Padrão           0.48
+Mínimo                  1.00
+Primeiro Quartil        1.00
+Mediana                 2.00
+Terceiro Quartil        2.00
+max                     2.00
+Moda                    2.00
+
+Nome da tabela: LOCNASC
+Contagem            13005.00
+Média                   1.01
+Desvio Padrão           0.16
+Mínimo                  1.00
+Primeiro Quartil        1.00
+Mediana                 1.00
+Terceiro Quartil        1.00
+max                     4.00
+Moda                    1.00
+
