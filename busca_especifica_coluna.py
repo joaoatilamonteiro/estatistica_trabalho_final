@@ -1,5 +1,9 @@
 import os
 import pandas as pd
+import matplotlib.pyplot as plt
+
+"""Gráfico com
+Mães menores de idade(com faixa etária) Que mostre a mortalidade entre as faixas e razoes de morte"""
 
 caminho_tabela_vivos2024 = r"dados/2024/dados-de-nascidos-vivos-2024-jun.csv"
 tabela_vivos2024 = pd.read_csv(caminho_tabela_vivos2024, sep = ";")
@@ -17,14 +21,14 @@ caminho_txt = os.path.join(caminho_pasta_txts, nome_arquivo)
 # dicionário da planilha retirada do PDF
 dicionario_projeto = {
     "pesquisa": {
-        "count": "Contagem",
+        "count": "Registro",
         "mean": "Média",
         "std": "Desvio Padrão",
         "min": "Mínimo",
         "25%": "Primeiro Quartil",
         "50%": "Mediana",
         "75%": "Terceiro Quartil",
-        "Max": "Máximo"
+        "max": "Máximo"
     },
     "locnasc": {
         9: "Ignorado",
@@ -108,30 +112,83 @@ dicionario_projeto = {
 ]"""
 
 while True:
+    soma = 0
     coluna = input(
         "--------------------Buscador de Colunas--------------------\n --Caso você deseje sair digite 'parar'\n"
         "Nome da coluna que você deseja pesquisar: ").strip().upper()
+
     if coluna == "PARAR":
         print("busca fechada")
         break
+
+    busca = int(input("Qual o valor que voce quer "))
+
     if coluna not in tabela_vivos2024.columns:
         print("tabela não encontrada")
         continue
+
 
     coluna1 = tabela_vivos2024[coluna]
     info = coluna1.describe()
 
     #TODO if que traduza valores não númericos, valores extensos que estão em codigo, tenho o nome dessas pastas em dicionario_projeto
 
+
+
     info.loc["Moda"] = coluna1.mode().iloc[0]
+    #metodo novo de contar
+    info.loc["Frequencia"] = coluna1.value_counts().get(busca, 0)  #ele pega a contagem do valor buscado se nao existir retorna = 0
+    info.loc["maternidade precoce"] = coluna1.value_counts().get(17, 0)
+
+    for i, valor in enumerate(coluna1):  # coluna1 já é a coluna
+        if valor < 20:
+            soma += 1
+    info.loc["maternidade precoce"] = soma
+
+    #retira o cont/registro
+    info = info.drop("count", errors="ignore")
 
     # Substitui o nome das variáveis em vez de ser nomes em inglês, troca pelos em português, deixando na mesma variável
     info1 = info.rename(index=dicionario_projeto["pesquisa"])
-    # arredonda resultado do describe
+
     info1 = round(info1, 2)
 
-    with open(caminho_txt, "a", encoding="utf-8") as arquivo:
-        arquivo.write(f"Nome da coluna: {coluna}\n{info1.to_string()}\n\n\n")
+    info1_str = info1.to_string()
 
-    print(info1.to_string())
+    with open(caminho_txt, "a", encoding="utf-8") as arquivo:
+        arquivo.write(f"Nome da coluna: {coluna}\n{info1_str}\n\n\n")
+
+    def cria_grafico():
+        fig, ax1 = plt.subplots(figsize=(10, 5))
+
+        # Dados sem frequência
+        dados_sem_frequencia = info1.drop("Frequencia")
+        dados_com_frequencia = info1["Frequencia"]
+
+        # Primeiro eixo Y
+        ax1.bar(dados_sem_frequencia.index, dados_sem_frequencia.values, color='steelblue')
+        ax1.set_ylabel('Outras Estatísticas')
+        ax1.tick_params(axis='x', rotation=45)
+
+        # Segundo eixo Y
+        ax2 = ax1.twinx()
+        ax2.bar(["Frequencia"], [dados_com_frequencia], color='orange', width=0.4)
+        ax2.set_ylabel('Frequência')
+
+        plt.title(f"{coluna}")
+        plt.tight_layout()
+        plt.show()
+        #plt.savefig(f"{coluna}_estatisticas.png", dpi=300)
+
+    cria_grafico()
+    print(info1_str)
+
+
+
+#metodo antigo de contar
+"""    for i, valor in enumerate(coluna1):  # coluna1 já é a coluna
+        if valor == busca:
+            soma += 1
+    info.loc["Frequencia"] = soma"""
+
 
