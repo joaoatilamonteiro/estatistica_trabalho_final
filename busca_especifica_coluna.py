@@ -1,12 +1,14 @@
 import os
+#para análisar os dados
 import pandas as pd
+#para criar os gráficos em base dos dados
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 """Gráfico com
 Mães menores de idade(com faixa etária) Que mostre a mortalidade entre as faixas e razoes de morte"""
 
-caminho_tabela_vivos2024 = r"dados/2024/dados-de-nascidos-vivos-2024-jun.csv"
+caminho_tabela_vivos2024 = r"C:\python_projects\estatistica_trabalho_final\dados\2024\dados-de-nascidos-vivos-2024-jun.csv"
 tabela_vivos2024 = pd.read_csv(caminho_tabela_vivos2024, sep = ";")
 
 nome_arquivo = os.path.basename(caminho_tabela_vivos2024).split(".")[0]
@@ -102,10 +104,11 @@ dicionario_projeto = {
         2: "Não"
     }
 }
-
+graficos = ["PARTOSPRENATALCONSULT", " HORANASC", " FILHOSMORTOSETARIAMÃE"," PARTOS", " TIPOSPARTOETARIAMAE"]
 
 while True:
     soma = 0
+
     coluna = input(
         "--------------------Buscador de Colunas--------------------\n --Caso você deseje sair digite 'parar'\n"
         "Nome da coluna que você deseja pesquisar: ").strip().upper()
@@ -114,251 +117,261 @@ while True:
         print("busca fechada")
         break
 
+    elif coluna not in tabela_vivos2024.columns:
+        def dados():
+            if coluna == "PESONASC":
+                tabela = tabela_vivos2024.copy()
 
-    if coluna not in tabela_vivos2024.columns:
+                tabela["PESO"] = pd.to_numeric(tabela["PESO"], errors="coerce")
+                tabela["PESO"].plot.hist(bins=50, color="salmon", edgecolor="black")
+                plt.title("Distribuição do Peso ao Nascer")
+                plt.xlabel("Peso (g)")
+                plt.ylabel("Frequência")
+                plt.savefig(f"{os.path.join(caminho_pasta_graficos, coluna)}_grafico.png", dpi=300)
+                plt.show()
+
+            elif coluna == "PARTOSPRENATALCONSULT":
+                tabela = tabela_vivos2024.copy()
+
+                # CONVERTE AS TABELAS PARA VALORES NÚMERICOS
+                tabela["QTDPARTNOR"] = pd.to_numeric(tabela["QTDPARTNOR"], errors="coerce")
+                tabela["QTDPARTCES"] = pd.to_numeric(tabela["QTDPARTCES"], errors="coerce")
+                tabela["CONSULTAS"] = pd.to_numeric(tabela["CONSULTAS"], errors="coerce")
+                tabela = tabela[tabela["CONSULTAS"].isin([1, 2, 3, 4])]
+                tabela["TOTAL_PARTOS"] = tabela["QTDPARTNOR"].fillna(0) + tabela["QTDPARTCES"].fillna(0)
+                # Organizada por número de consultas e soma dos partos
+                agrupado = tabela.groupby("CONSULTAS")["TOTAL_PARTOS"].sum()
+
+                # Calcula percentual de cada categoria
+                percentual = (agrupado / agrupado.sum()) * 100
+
+                # Traduz o código, retira os números pelas as palavras vindas do dicionario do DF
+                agrupado.index = agrupado.index.map(dicionario_projeto["consultas"])
+                percentual.index = percentual.index.map(dicionario_projeto["consultas"])
+
+                sns.set_style("whitegrid")
+
+                # Plotagem
+                plt.figure(figsize=(9, 6))
+                bars = plt.bar(agrupado.index, agrupado.values, color="#6699CC", edgecolor="#336699")
+
+                # Rótulos no topo das barras com valor absoluto e percentual
+                for bar, val, perc in zip(bars, agrupado.values, percentual.values):
+                    height = bar.get_height()
+                    plt.text(bar.get_x() + bar.get_width() / 2, height + max(agrupado.values) * 0.02,
+                             f"{int(val):,}\n({perc:.1f}%)", ha='center', va='bottom',
+                             fontsize=11, fontweight='semibold', color="#003366")
+
+                plt.title("Total de Partos por Número de Consultas Pré-Natal", fontsize=16, weight='bold',
+                          color="#003366")
+                plt.xlabel("Consultas Pré-Natal", fontsize=13)
+                plt.ylabel("Número Total de Partos", fontsize=13)
+                plt.ylim(0, max(agrupado.values) * 1.15)
+                plt.grid(axis='y', linestyle='--', alpha=0.7)
+                plt.tight_layout()
+                plt.savefig(f"{os.path.join(caminho_pasta_graficos, coluna)}_grafico.png", dpi=300)
+
+                plt.show()
+
+
+            elif coluna == "FILHOSMORTOSETARIAMÃE":
+                tabela = tabela_vivos2024.copy()
+                tabela = tabela.dropna(subset=['IDADEMAE', 'QTDFILMORT'])
+                # Converte para numérico e filtra valores válidos
+                tabela['IDADEMAE'] = pd.to_numeric(tabela['IDADEMAE'], errors='coerce')
+                tabela['QTDFILMORT'] = pd.to_numeric(tabela['QTDFILMORT'], errors='coerce')
+                # Define faixas etárias para a mãe
+                bins = list(range(10, 70, 5))  # 10-14, 15-19, ..., 65-69
+                labels = [f"{i + 1}-{i + 5}" for i in bins[:-1]]
+                tabela['faixa_mae'] = pd.cut(tabela['IDADEMAE'], bins=bins, labels=labels, right=True)
+                # Agrupa e soma filhos mortos por faixa
+                filhos_mortos_faixa = tabela.groupby('faixa_mae')['QTDFILMORT'].sum()
+
+                # Calcula percentual por faixa
+                percentual = (filhos_mortos_faixa / filhos_mortos_faixa.sum()) * 100
+
+                # Plot
+                sns.set_style('whitegrid')
+                plt.figure(figsize=(12, 6))
+                bars = plt.bar(filhos_mortos_faixa.index.astype(str), filhos_mortos_faixa.values, color='salmon',
+                               edgecolor='darkred')
+
+                plt.title('Quantidade de Filhos Mortos por Faixa Etária da Mãe', fontsize=16, weight='bold')
+                plt.xlabel('Faixa Etária da Mãe (anos)', fontsize=12)
+                plt.ylabel('Quantidade de Filhos Mortos', fontsize=12)
+                plt.xticks(rotation=45)
+                plt.ylim(0, filhos_mortos_faixa.max() * 1.15)
+
+                # Adiciona valores absolutos e percentuais nas barras
+                for bar, val, perc in zip(bars, filhos_mortos_faixa.values, percentual.values):
+                    height = bar.get_height()
+                    plt.text(bar.get_x() + bar.get_width() / 2, height + filhos_mortos_faixa.max() * 0.02,
+                             f"{int(val)}\n({perc:.1f}%)", ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+                plt.tight_layout()
+                plt.show()
+
+            elif coluna == "PARTOS":
+                tabela = tabela_vivos2024.copy()
+                # Converte a coluna PARTO para numérico
+                tabela["PARTO"] = pd.to_numeric(tabela["PARTO"], errors="coerce")
+
+                # Filtra valores válidos (1 = vaginal, 2 = cesáreo)
+                # pega as palavras do dicionario
+                tabela = tabela[tabela["PARTO"].isin([1, 2])]
+                tabela["TIPO_PARTO"] = tabela["PARTO"].map(dicionario_projeto["parto"])
+                # Conta os partos e calcula percentual
+                contagem = tabela["TIPO_PARTO"].value_counts().sort_index()
+                percentual = contagem / contagem.sum() * 100
+
+                # Plotagem
+                sns.set_style("whitegrid")
+                plt.figure(figsize=(8, 5))
+                bars = plt.bar(percentual.index, percentual.values, color=["skyblue", "lightcoral"], edgecolor="black")
+
+                plt.title("Percentual de Partos Vaginais e Cesáreos", fontsize=16, weight="bold")
+                plt.ylabel("Percentual (%)")
+                plt.ylim(0, percentual.max() * 1.2)
+
+                # Adiciona valores percentuais no topo das barras
+                for bar, perc in zip(bars, percentual.values):
+                    height = bar.get_height()
+                    plt.text(bar.get_x() + bar.get_width() / 2, height + 1, f"{perc:.1f}%",
+                             ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+                plt.tight_layout()
+                plt.show()
+
+
+            elif coluna == "TIPOSPARTOETARIAMAE":
+
+                tabela = tabela_vivos2024.copy()
+                tabela['IDADEMAE'] = pd.to_numeric(tabela['IDADEMAE'], errors='coerce')
+                tabela['PARTO'] = pd.to_numeric(tabela['PARTO'], errors='coerce')
+                tabela = tabela.dropna(subset=['IDADEMAE', 'PARTO'])
+                tabela = tabela[tabela['PARTO'].isin([1, 2])]
+                bins = [0, 19, 29, 39, 120]
+                labels = ['< 20 anos', '20-29 anos', '30-39 anos', '40+ anos']
+                tabela['FAIXA_ETARIA'] = pd.cut(tabela['IDADEMAE'], bins=bins, labels=labels, right=True)
+                tabela['TIPO_PARTO'] = tabela['PARTO'].map(dicionario_projeto["parto"])
+                contagem = tabela.groupby(['FAIXA_ETARIA', 'TIPO_PARTO'], observed=True).size().unstack().fillna(0)
+                proporcao = contagem.div(contagem.sum(axis=1), axis=0) * 100
+                sns.set_style("whitegrid")
+                cores = {'Vaginal': 'mediumseagreen', 'Cesáreo': 'tomato'}
+                ax = proporcao.plot(kind='bar', stacked=True, color=cores, figsize=(10, 7), edgecolor='grey')
+                for container in ax.containers:
+
+                    ax.bar_label(
+                        container,
+                        labels=[f'{v:.1f}%' if v > 5 else '' for v in container.datavalues],
+                        label_type='center',
+                        fontsize=10,
+                        color='white',
+                        fontweight='bold'
+                    )
+
+                plt.title('Distribuição % dos Tipos de Parto por Faixa Etária da Mãe', fontsize=16, weight='bold')
+                plt.xlabel('Faixa Etária da Mãe', fontsize=12)
+                plt.ylabel('Proporção (%)', fontsize=12)
+                plt.legend(title='Tipo de Parto', bbox_to_anchor=(1.05, 1), loc='upper left')
+                plt.xticks(rotation=0)
+                plt.grid(axis='y', linestyle='--', alpha=0.6)
+                plt.ylim(0, 100)
+                plt.tight_layout(rect=[0, 0, 0.85, 1])
+                plt.savefig(f"{os.path.join(caminho_pasta_graficos, coluna)}_grafico.png", dpi=300)
+                plt.show()
+
+        dados()
         print("tabela não encontrada")
-        continue
+
+    elif coluna in tabela_vivos2024.columns:
+        print("tem esse conteudo")
+        def dados_tabela():
+            coluna1 = tabela_vivos2024[coluna]
+            info = coluna1.describe()
+
+            info.loc["Moda"] = coluna1.mode().iloc[0]
+            # metodo novo de contar
+
+            # Substitui o nome das variáveis em vez de ser nomes em inglês, troca pelos em português, deixando na mesma variável
+            info1 = info.rename(index=dicionario_projeto["pesquisa"])
+
+            info1 = round(info1, 2)
+
+            info1_str = info1.to_string()
+
+            with open(caminho_txt, "a", encoding="utf-8") as arquivo:
+                arquivo.write(f"Nome da coluna: {coluna}\n{info1_str}\n\n\n")
+
+            if coluna == "IDADEMAE":
+                tabela_copy = tabela_vivos2024.copy()
+                tabela_copy["IDADEMAE"] = pd.to_numeric(tabela_copy["IDADEMAE"], errors="coerce")
+                definido = tabela_copy.dropna(subset=["IDADEMAE"])
+                bins = list(range(10, 65, 5))
+                labels = [f"{i + 1}-{i + 5}" for i in bins[:-1]]
+                definido["faixa_etaria"] = pd.cut(definido["IDADEMAE"], bins=bins, labels=labels, right=True)
+                contagem = definido["faixa_etaria"].value_counts().sort_index()
+                plt.figure(figsize=(10, 6))
+                contagem.plot(kind="bar", color="skyblue", edgecolor="black")
+                plt.title("Número de Mães por Faixa Etária")
+                plt.xlabel("Faixa Etária (anos)")
+                plt.ylabel("Número de Nascimentos")
+                plt.xticks(rotation=45)
+                plt.grid(axis='y', linestyle='--', alpha=0.7)
+                plt.tight_layout()
+                plt.savefig(f"{os.path.join(caminho_pasta_graficos, coluna)}_grafico.png", dpi=300)
+                plt.show()
+
+            elif coluna == "IDADEPAI":
+                tabela = tabela_vivos2024.copy()
+                tabela["IDADEPAI"] = pd.to_numeric(tabela["IDADEPAI"], errors="coerce")
+                tabela = tabela.dropna(subset=["IDADEPAI"])
+                bins = list(range(10, 65, 5))
+                labels = [f"{i + 1}-{i + 5}" for i in bins[:-1]]
+                tabela["faixa_etaria"] = pd.cut(tabela["IDADEPAI"], bins=bins, labels=labels, right=True)
+                contagem = tabela["faixa_etaria"].value_counts().sort_index()
+                plt.figure(figsize=(10, 6))
+                contagem.plot(kind="bar", color="skyblue", edgecolor="black")
+                plt.title("Número de Pais por Faixa Etária")
+                plt.xlabel("Faixa Etária (anos)")
+                plt.ylabel("Número de Nascimentos")
+                plt.xticks(rotation=45)
+                plt.grid(axis='y', linestyle='--', alpha=0.7)
+                plt.tight_layout()
+                plt.savefig(f"{os.path.join(caminho_pasta_graficos, coluna)}_grafico.png", dpi=300)
+                plt.show()
+
+            elif coluna == "HORANASC":
+                tabela = tabela_vivos2024.copy()
+                tabela["HORANASC"] = pd.to_numeric(tabela["HORANASC"], errors="coerce")
+                tabela["HORA"] = (tabela["HORANASC"] // 100).dropna().astype(int)
+
+                tabela["HORA"].value_counts().sort_index().plot(kind="bar", color="mediumorchid")
+                plt.title("Nascimentos por Hora do Dia")
+                plt.xlabel("Hora")
+                plt.ylabel("Número de Nascimentos")
+                plt.savefig(f"{os.path.join(caminho_pasta_graficos, coluna)}_grafico.png", dpi=300)
+
+                plt.show()
+
+            else:
+                fig, ax1 = plt.subplots(figsize=(10, 5))
+                dados_sem_frequencia = info1
+                ax1.bar(dados_sem_frequencia.index, dados_sem_frequencia.values, color='steelblue')
+                ax1.set_ylabel('Estatísticas')
+                ax1.tick_params(axis='x', rotation=45)
+                plt.title(f"{coluna}")
+                plt.tight_layout()
+                plt.savefig(f"{os.path.join(caminho_pasta_graficos,coluna)}_grafico.png", dpi=300)
+                plt.show()
+
+            with open(caminho_txt, "a", encoding="utf-8") as arquivo:
+                arquivo.write(f"Nome da coluna: {coluna}\n{info1.to_string()}\n\n\n")
 
 
-    coluna1 = tabela_vivos2024[coluna]
-    info = coluna1.describe()
-
-    info.loc["Moda"] = coluna1.mode().iloc[0]
-    #metodo novo de contar
-
-    # Substitui o nome das variáveis em vez de ser nomes em inglês, troca pelos em português, deixando na mesma variável
-    info1 = info.rename(index=dicionario_projeto["pesquisa"])
-
-    info1 = round(info1, 2)
-
-    info1_str = info1.to_string()
-
-    with open(caminho_txt, "a", encoding="utf-8") as arquivo:
-        arquivo.write(f"Nome da coluna: {coluna}\n{info1_str}\n\n\n")
-
-    def dados():
-        if coluna == "IDADEMAE":
-            tabela_copy = tabela_vivos2024.copy()
-            tabela_copy["IDADEMAE"] = pd.to_numeric(tabela_copy["IDADEMAE"], errors="coerce")
-            definido = tabela_copy.dropna(subset=["IDADEMAE"])
-            bins = list(range(10, 65, 5))
-            labels = [f"{i+1}-{i+5}" for i in bins[:-1]]
-            definido["faixa_etaria"] = pd.cut(definido["IDADEMAE"], bins=bins, labels=labels, right=True)
-            contagem = definido["faixa_etaria"].value_counts().sort_index()
-            plt.figure(figsize=(10, 6))
-            contagem.plot(kind="bar", color="skyblue", edgecolor="black")
-            plt.title("Número de Mães por Faixa Etária")
-            plt.xlabel("Faixa Etária (anos)")
-            plt.ylabel("Número de Nascimentos")
-            plt.xticks(rotation=45)
-            plt.grid(axis='y', linestyle='--', alpha=0.7)
-            plt.tight_layout()
-            plt.savefig(f"{os.path.join(caminho_pasta_graficos,coluna)}_grafico.png", dpi=300)
-            plt.show()
-
-        elif coluna == "IDADEPAI":
-            tabela = tabela_vivos2024.copy()
-            tabela["IDADEPAI"] = pd.to_numeric(tabela["IDADEPAI"], errors="coerce")
-            tabela = tabela.dropna(subset=["IDADEPAI"])
-            bins = list(range(10, 65, 5))
-            labels = [f"{i+1}-{i+5}" for i in bins[:-1]]
-            tabela["faixa_etaria"] = pd.cut(tabela["IDADEPAI"], bins=bins, labels=labels, right=True)
-            contagem = tabela["faixa_etaria"].value_counts().sort_index()
-            plt.figure(figsize=(10, 6))
-            contagem.plot(kind="bar", color="skyblue", edgecolor="black")
-            plt.title("Número de Pais por Faixa Etária")
-            plt.xlabel("Faixa Etária (anos)")
-            plt.ylabel("Número de Nascimentos")
-            plt.xticks(rotation=45)
-            plt.grid(axis='y', linestyle='--', alpha=0.7)
-            plt.tight_layout()
-            plt.savefig(f"{os.path.join(caminho_pasta_graficos,coluna)}_grafico.png", dpi=300)
-            plt.show()
-
-        elif coluna == "PESO":
-            tabela = tabela_vivos2024.copy()
-
-            tabela["PESO"] = pd.to_numeric(tabela["PESO"], errors="coerce")
-            tabela["PESO"].plot.hist(bins=50, color="salmon", edgecolor="black")
-            plt.title("Distribuição do Peso ao Nascer")
-            plt.xlabel("Peso (g)")
-            plt.ylabel("Frequência")
-            plt.savefig(f"{os.path.join(caminho_pasta_graficos,coluna)}_grafico.png", dpi=300)
-
-            plt.show()
-
-        elif coluna == "PARTOSPRENATALCONSULT":
-            tabela = tabela_vivos2024.copy()
-            #CONVERTE AS TABELAS PARA VALORES NÚMERICOS
-            tabela["QTDPARTNOR"] = pd.to_numeric(tabela["QTDPARTNOR"], errors="coerce")
-            tabela["QTDPARTCES"] = pd.to_numeric(tabela["QTDPARTCES"], errors="coerce")
-            tabela["CONSULTAS"] = pd.to_numeric(tabela["CONSULTAS"], errors="coerce")
-            tabela = tabela[tabela["CONSULTAS"].isin([1, 2, 3, 4])]
-            tabela["TOTAL_PARTOS"] = tabela["QTDPARTNOR"].fillna(0) + tabela["QTDPARTCES"].fillna(0)
-            # Organizada por número de consultas e soma dos partos
-            agrupado = tabela.groupby("CONSULTAS")["TOTAL_PARTOS"].sum()
-
-            # Calcula percentual de cada categoria
-            percentual = (agrupado / agrupado.sum()) * 100
-
-            #Traduz o código, retira os números pelas as palavras vindas do dicionario do DF
-            agrupado.index = agrupado.index.map(dicionario_projeto["consultas"])
-            percentual.index = percentual.index.map(dicionario_projeto["consultas"])
-
-            sns.set_style("whitegrid")
-
-            # Plotagem
-            plt.figure(figsize=(9, 6))
-            bars = plt.bar(agrupado.index, agrupado.values, color="#6699CC", edgecolor="#336699")
-
-            # Rótulos no topo das barras com valor absoluto e percentual
-            for bar, val, perc in zip(bars, agrupado.values, percentual.values):
-                height = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width() / 2, height + max(agrupado.values) * 0.02,
-                         f"{int(val):,}\n({perc:.1f}%)", ha='center', va='bottom',
-                         fontsize=11, fontweight='semibold', color="#003366")
-
-            plt.title("Total de Partos por Número de Consultas Pré-Natal", fontsize=16, weight='bold', color="#003366")
-            plt.xlabel("Consultas Pré-Natal", fontsize=13)
-            plt.ylabel("Número Total de Partos", fontsize=13)
-            plt.ylim(0, max(agrupado.values) * 1.15)
-            plt.grid(axis='y', linestyle='--', alpha=0.7)
-            plt.tight_layout()
-            plt.savefig(f"{os.path.join(caminho_pasta_graficos,coluna)}_grafico.png", dpi=300)
-
-            plt.show()
-
-        elif coluna == "HORANASC":
-            tabela = tabela_vivos2024.copy()
-            tabela["HORANASC"] = pd.to_numeric(tabela["HORANASC"], errors="coerce")
-            tabela["HORA"] = (tabela["HORANASC"] // 100).dropna().astype(int)
-
-            tabela["HORA"].value_counts().sort_index().plot(kind="bar", color="mediumorchid")
-            plt.title("Nascimentos por Hora do Dia")
-            plt.xlabel("Hora")
-            plt.ylabel("Número de Nascimentos")
-            plt.savefig(f"{os.path.join(caminho_pasta_graficos,coluna)}_grafico.png", dpi=300)
-
-            plt.show()
-
-        elif coluna == "FILHOSMORTOSETARIAMÃE":
-            tabela = tabela_vivos2024.copy()
-            tabela = tabela.dropna(subset=['IDADEMAE', 'QTDFILMORT'])
-            # Converte para numérico e filtra valores válidos
-            tabela['IDADEMAE'] = pd.to_numeric(tabela['IDADEMAE'], errors='coerce')
-            tabela['QTDFILMORT'] = pd.to_numeric(tabela['QTDFILMORT'], errors='coerce')
-            # Define faixas etárias para a mãe
-            bins = list(range(10, 70, 5))  # 10-14, 15-19, ..., 65-69
-            labels = [f"{i + 1}-{i + 5}" for i in bins[:-1]]
-            tabela['faixa_mae'] = pd.cut(tabela['IDADEMAE'], bins=bins, labels=labels, right=True)
-            # Agrupa e soma filhos mortos por faixa
-            filhos_mortos_faixa = tabela.groupby('faixa_mae')['QTDFILMORT'].sum()
-
-            # Calcula percentual por faixa
-            percentual = (filhos_mortos_faixa / filhos_mortos_faixa.sum()) * 100
-
-            # Plot
-            sns.set_style('whitegrid')
-            plt.figure(figsize=(12, 6))
-            bars = plt.bar(filhos_mortos_faixa.index.astype(str), filhos_mortos_faixa.values, color='salmon',
-                           edgecolor='darkred')
-
-            plt.title('Quantidade de Filhos Mortos por Faixa Etária da Mãe', fontsize=16, weight='bold')
-            plt.xlabel('Faixa Etária da Mãe (anos)', fontsize=12)
-            plt.ylabel('Quantidade de Filhos Mortos', fontsize=12)
-            plt.xticks(rotation=45)
-            plt.ylim(0, filhos_mortos_faixa.max() * 1.15)
-
-            # Adiciona valores absolutos e percentuais nas barras
-            for bar, val, perc in zip(bars, filhos_mortos_faixa.values, percentual.values):
-                height = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width() / 2, height + filhos_mortos_faixa.max() * 0.02,
-                         f"{int(val)}\n({perc:.1f}%)", ha='center', va='bottom', fontsize=10, fontweight='bold')
-
-            plt.tight_layout()
-            plt.show()
-
-        elif coluna == "PARTOS":
-            tabela = tabela_vivos2024.copy()
-            # Converte a coluna PARTO para numérico
-            tabela["PARTO"] = pd.to_numeric(tabela["PARTO"], errors="coerce")
-
-            # Filtra valores válidos (1 = vaginal, 2 = cesáreo)
-            #pega as palavras do dicionario
-            tabela = tabela[tabela["PARTO"].isin([1, 2])]
-            tabela["TIPO_PARTO"] = tabela["PARTO"].map(dicionario_projeto["parto"])
-            # Conta os partos e calcula percentual
-            contagem = tabela["TIPO_PARTO"].value_counts().sort_index()
-            percentual = contagem / contagem.sum() * 100
-
-            # Plotagem
-            sns.set_style("whitegrid")
-            plt.figure(figsize=(8, 5))
-            bars = plt.bar(percentual.index, percentual.values, color=["skyblue", "lightcoral"], edgecolor="black")
-
-            plt.title("Percentual de Partos Vaginais e Cesáreos", fontsize=16, weight="bold")
-            plt.ylabel("Percentual (%)")
-            plt.ylim(0, percentual.max() * 1.2)
-
-            # Adiciona valores percentuais no topo das barras
-            for bar, perc in zip(bars, percentual.values):
-                height = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width() / 2, height + 1, f"{perc:.1f}%",
-                         ha='center', va='bottom', fontsize=12, fontweight='bold')
-
-            plt.tight_layout()
-            plt.show()
-
-        elif coluna == "TIPOSPARTOETARIAMAE":
-            tabela = tabela_vivos2024.copy()
-
-            # Converte idade para número (ignora valores inválidos)
-            tabela['IDADEMAE'] = pd.to_numeric(tabela['IDADEMAE'], errors='coerce')
-
-            # Cria faixas etárias
-            bins = [0, 19, 29, 39, 120]
-            labels = ['< 20 anos', '20-29 anos', '30-39 anos', '40+ anos']
-            tabela['FAIXA_ETARIA'] = pd.cut(tabela['IDADEMAE'], bins=bins, labels=labels, right=True)
-
-            #info1 = info.rename(index=dicionario_projeto["pesquisa"])
-            tabela = tabela[dicionario_projeto["parto"]]
-
-            # Remove partos ignorados, se desejar
-            tabela = tabela[tabela['PARTO'] != 'Ignorado']
-
-            contagem = tabela.groupby(['FAIXA_ETARIA', 'PARTO']).size().unstack().fillna(0)
-
-            # Calcula proporções
-            proporcao = contagem.div(contagem.sum(axis=1), axis=0) * 100
-
-            # Plotando
-            cores = {'Vaginal': 'mediumseagreen', 'Cesáreo': 'tomato'}
-            proporcao.plot(kind='bar', stacked=True, color=cores, figsize=(10, 6))
-
-            plt.title('Distribuição Percentual dos Tipos de Parto por Faixa Etária da Mãe', fontsize=14)
-            plt.xlabel('Faixa Etária da Mãe')
-            plt.ylabel('Proporção (%)')
-            plt.legend(title='Tipo de Parto')
-            plt.grid(axis='y', linestyle='--', alpha=0.5)
-            plt.tight_layout()
-            plt.show()
+            print(info1_str)
+        dados_tabela()
 
 
+#TODO fazer com que se coluna não for achada na variavel coluna fazer com que ainda continue procurando na mesma variável, procurar tabela, se tabela existir fazer gráfico grandezas se não imprimir mensagem de erro
 
-        else:
-            fig, ax1 = plt.subplots(figsize=(10, 5))
-            dados_sem_frequencia = info1
-            ax1.bar(dados_sem_frequencia.index, dados_sem_frequencia.values, color='steelblue')
-            ax1.set_ylabel('Estatísticas')
-            ax1.tick_params(axis='x', rotation=45)
-            plt.title(f"{coluna}")
-            plt.tight_layout()
-            plt.savefig(f"{os.path.join(caminho_pasta_graficos,coluna)}_grafico.png", dpi=300)
-            plt.show()
-
-
-        with open(caminho_txt, "a", encoding="utf-8") as arquivo:
-            arquivo.write(f"Nome da coluna: {coluna}\n{info1.to_string()}\n\n\n")
-
-    dados()
-    print(info1_str)
