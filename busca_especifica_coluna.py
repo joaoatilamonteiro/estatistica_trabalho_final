@@ -8,7 +8,7 @@ import seaborn as sns
 """Gráfico com
 Mães menores de idade(com faixa etária) Que mostre a mortalidade entre as faixas e razoes de morte"""
 
-caminho_tabela_vivos2024 = r"C:\python_projects\estatistica_trabalho_final\dados\2024\dados-de-nascidos-vivos-2024-jun.csv"
+caminho_tabela_vivos2024 = r"dados\2024\dados-de-nascidos-vivos-2024-jun.csv"
 tabela_vivos2024 = pd.read_csv(caminho_tabela_vivos2024, sep = ";")
 
 nome_arquivo = os.path.basename(caminho_tabela_vivos2024).split(".")[0]
@@ -104,17 +104,17 @@ dicionario_projeto = {
         2: "Não"
     }
 }
-graficos = ["PARTOSPRENATALCONSULT", " HORANASC", " FILHOSMORTOSETARIAMÃE"," PARTOS", " TIPOSPARTOETARIAMAE"]
 
 while True:
-    soma = 0
+    print("Tabelas ja prontas:\n-PESONASC\n-PARTOSPRENATALCONSULT\n-FILHOSMORTOSETARIAMÃE\n-PARTOS\n-TIPOSPARTOETARIAMAE\n-IDADEMAE\n-IDADEPAI\n-HORANASC")
 
     coluna = input(
         "--------------------Buscador de Colunas--------------------\n --Caso você deseje sair digite 'parar'\n"
         "Nome da coluna que você deseja pesquisar: ").strip().upper()
 
+
     if coluna == "PARAR":
-        print("busca fechada")
+        print("--------------------BUSCA ENCERRADA--------------------")
         break
 
     elif coluna not in tabela_vivos2024.columns:
@@ -293,7 +293,7 @@ while True:
             info.loc["Moda"] = coluna1.mode().iloc[0]
             # metodo novo de contar
 
-            # Substitui o nome das variáveis em vez de ser nomes em inglês, troca pelos em português, deixando na mesma variável
+            # Substitui o nome das variáveis em vez de ser em inglês, troca pelos em português, deixando na mesma variável
             info1 = info.rename(index=dicionario_projeto["pesquisa"])
 
             info1 = round(info1, 2)
@@ -373,5 +373,4 @@ while True:
         dados_tabela()
 
 
-#TODO fazer com que se coluna não for achada na variavel coluna fazer com que ainda continue procurando na mesma variável, procurar tabela, se tabela existir fazer gráfico grandezas se não imprimir mensagem de erro
 
